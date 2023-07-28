@@ -1,0 +1,93 @@
+---
+title: "NYPD Copaganda - Unveiling Chronological Periodicity"
+author: "Jansen Smith"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Purpose
+
+This is an analysis of NYPD shooting incidents occurring from the start of 2006 to the end of 2022. The data and analysis presented herein is an effort to understand and analyze the provided data and to draw some meaningful conclusions as part of the “Data Science As A Field Course” at UC Boulder in the Summer 2 session in 2023.
+Due to the source of the data provided, all analysis should be considered purely conjectural.
+In particular, this report seeks to establish that the NYPD's reported shooting data demonstrates periodicity by the time of year.
+
+## Data Source and Description
+
+The data was obtained from NYC's open data API and contains information on NYPD shooting incidents. The dataset includes columns like OCCUR_DATE (date of incident), to which columns such as Week_of_Year were added to facilitate analysis.
+
+
+## Importing required libraries
+The only libraries required to run the following analysis are tidyverse and lubridate, and this code block is designed to automatically install tidyverse if the user has not already done so.
+
+```{r libraries}
+# Install the tidyverse package if not already installed
+if (!requireNamespace("tidyverse", quietly = TRUE)) {
+  install.packages("tidyverse")
+}
+
+# Load the tidyverse package
+library(tidyverse)
+
+# Load the lubridate package for parsing dates
+library(lubridate)
+```
+
+## NYPD Shooting data import
+
+The wisdom of using the NYPD as a source for crime statistics is a question best left to the reader. For more on this topic, please refer to the many historical overturned convictions due to demonstrated systemic NYPD illegality: https://abc7ny.com/convictions-overturned-brooklyn-da-eric-gonzalez-nypd-misconduct-corruption/12212052/
+
+To disassociate this report from the worst excesses of the NYPD's misconduct, the asserted racial identities of both victims and alleged perpetrators are immediately removed from the dataset.
+
+```{r import}
+url = "https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv?accessType=DOWNLOAD"
+data = read_csv(url)
+data = data %>%
+  mutate(OCCUR_DATE = mdy(OCCUR_DATE), Week_of_Year = lubridate::week(OCCUR_DATE)) %>%
+  select(-X_COORD_CD, -Y_COORD_CD, -Latitude, -Longitude, -Lon_Lat, -BORO, -LOC_OF_OCCUR_DESC, -PRECINCT, -JURISDICTION_CODE, -LOC_CLASSFCTN_DESC, -LOCATION_DESC, -STATISTICAL_MURDER_FLAG, -PERP_AGE_GROUP, -PERP_SEX, -PERP_RACE, OCCUR_TIME, -VIC_AGE_GROUP, -VIC_SEX, -VIC_RACE)
+spec(data)
+head(data, 20)
+summary(data)
+```
+
+## NYPD Shooting data visualization
+
+```{r plotting}
+data %>%
+  ggplot(aes(x = OCCUR_DATE)) +
+  geom_line(stat = "count") +
+  labs(title = "Number of NYPD Shooting Incidents Over Time",
+       x = "Date",
+       y = "Number of Incidents") +
+  theme_minimal() 
+
+# Plot the number of incidents per week of the year, aggregating all years
+data %>%
+  group_by(Week_of_Year) %>%
+  summarize(Num_Incidents = n(), Median_Incidents = median(Num_Incidents)) %>%
+  ggplot(aes(x = Week_of_Year, y = Num_Incidents)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  geom_line(aes(y = Median_Incidents), color = "red", linewidth = 1.5) +  # Add a red line for the median
+  labs(title = "Aggregate Number of NYPD Shooting Incidents per Week of the Year",
+       x = "Week of the Year",
+       y = "Number of Incidents") +
+  theme_minimal()
+```
+
+## Analysis
+
+- As we can see from the shooting incidents over time, the data shows yearly periodicity.
+- When aggregated by week, this periodicity can be seen more clearly, with significantly more incidents occurring during the summer months.
+- Based on these findings, there is a potential argument for the NYPD to reevaluate its approach towards public safety and community support during the winter months, considering the demonstrated slowdown in shooting activity during that time.
+
+## Bias Assessment
+
+- The format of the analysis was specifically chosen to avoid known sources of bias, with the notable exception of inherent bias due to trusting NYPD incident reporting sources.
+- Relying on the NYPD's self-reported statistics to establish groundtruth crime data is itself inherently flawed. For example, the NYPD is likely to diminish the prelevance of crimes by the NYPD itself.
+- My hope is that chronological periodicity is a topic that would be cross-cultural and thus mitigate the impacts of my own cultural bias.
+- Political bias, however, should not be discounted. It is possible that the data suggests patterns that the author's mistrust of the NYPD may leave uncovered.
